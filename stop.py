@@ -8,6 +8,7 @@ import os
 import sys
 import random
 import subprocess
+import shutil
 from pathlib import Path
 from datetime import datetime
 
@@ -20,6 +21,12 @@ except ImportError:
 
 def get_uv_path():
     """Get the full path to uv executable."""
+    # First, try to find uv in system PATH
+    uv_in_path = shutil.which('uv')
+    if uv_in_path:
+        return uv_in_path
+    
+    # Fall back to the default location
     home_dir = Path.home()
     return str(home_dir / ".local" / "bin" / "uv")
 
@@ -49,11 +56,11 @@ def get_conversation_name(conversation_id):
 def get_completion_messages():
     """Return list of friendly completion messages."""
     return [
-        "Work complete!",
-        "All done!",
-        "Task finished!",
-        "Job complete!",
-        "Ready for next task!"
+        "work complete",
+        "all done",
+        "task finished",
+        "ready for review",
+        "finished successfully"
     ]
 
 
@@ -167,8 +174,8 @@ def announce_completion(conversation_id=""):
         # Get completion message (LLM-generated or fallback)
         completion_message = get_llm_completion_message()
 
-        # Combine chat name with completion message
-        full_message = f"Chat {chat_name} has finished. {completion_message}"
+        # Combine chat name with completion message into a natural, flowing announcement
+        full_message = f"Chat {chat_name}, {completion_message}"
         print(f"Announcing: {full_message}", file=sys.stderr)
 
         # Call the TTS script with the completion message

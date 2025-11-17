@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import subprocess
+import shutil
 from pathlib import Path
 from datetime import datetime
 
@@ -19,6 +20,12 @@ except ImportError:
 
 def get_uv_path():
     """Get the full path to uv executable."""
+    # First, try to find uv in system PATH
+    uv_in_path = shutil.which('uv')
+    if uv_in_path:
+        return uv_in_path
+    
+    # Fall back to the default location
     home_dir = Path.home()
     return str(home_dir / ".local" / "bin" / "uv")
 
