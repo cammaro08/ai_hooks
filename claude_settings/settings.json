@@ -1,0 +1,53 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/before_shell.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/after_shell.py"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/before_submit.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/stop.py"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "input=$(cat); dir=$(pwd | sed \"s|^$HOME|~|\"); model_name=$(echo \"$input\" | jq -r '.model.display_name // empty'); model_info=\"\"; if [ -n \"$model_name\" ]; then model_short=$(echo \"$model_name\" | sed -E 's/Claude ([0-9]+\\.?[0-9]*) (Sonnet|Opus|Haiku).*/\\2-\\1/' | sed 's/Sonnet/sonnet/' | sed 's/Opus/Opus/' | sed 's/Haiku/Haiku/'); model_info=$(printf '\\033[34m[%s]\\033[0m ' \"$model_short\"); fi; git_info=\"\"; if git rev-parse --git-dir > /dev/null 2>&1; then branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null); if [ -n \"$branch\" ]; then unstaged=\"\"; ! git diff --quiet 2>/dev/null && unstaged=\"*\"; staged=\"\"; ! git diff --cached --quiet 2>/dev/null && staged=\"+\"; git_info=$(printf '\\033[35m[\\033[32m%s\\033[31m%s\\033[33m%s\\033[35m]\\033[0m ' \"$branch\" \"$unstaged\" \"$staged\"); fi; fi; context_info=\"\"; total_input=$(echo \"$input\" | jq -r '.context_window.total_input_tokens // empty'); total_output=$(echo \"$input\" | jq -r '.context_window.total_output_tokens // empty'); ctx_size=$(echo \"$input\" | jq -r '.context_window.context_window_size // empty'); used_pct=$(echo \"$input\" | jq -r '.context_window.used_percentage // empty'); if [ -n \"$total_input\" ] && [ -n \"$total_output\" ] && [ -n \"$ctx_size\" ]; then total_used=$((total_input + total_output)); used_k=$(awk \"BEGIN {printf \\\"%.0f\\\", $total_used/1000}\"); ctx_k=$(awk \"BEGIN {printf \\\"%.0f\\\", $ctx_size/1000}\"); used_pct_int=$(printf \"%.0f\" \"$used_pct\"); context_info=$(printf '\\033[36m[%sk/%sk (%s%%)]\\033[0m ' \"$used_k\" \"$ctx_k\" \"$used_pct_int\"); fi; printf '\\033[35m🍎\\033[0m %s/ %s%s%s' \"$dir\" \"$model_info\" \"$git_info\" \"$context_info\""
+  },
+  "alwaysThinkingEnabled": true
+}
