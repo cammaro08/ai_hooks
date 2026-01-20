@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/stop.py"
+            "command": "~/.claude/hooks/stop.py --notify"
           }
         ]
       }
