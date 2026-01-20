@@ -160,43 +160,38 @@ def get_llm_completion_message():
     return random.choice(messages)
 
 
-def announce_completion(conversation_id=""):
-    """Announce completion using the best available TTS service."""
+def announce_completion(conversation_id="", waiting_for_input=False):
+    """Announce completion or permission request using OpenAI audio generation."""
     try:
-        tts_script = get_tts_script_path()
-        if not tts_script:
-            print("No TTS script found", file=sys.stderr)
-            return  # No TTS scripts available
-
         # Get chat name for this conversation
-        chat_name = get_conversation_name(conversation_id) if conversation_id else "Unknown"
+        chat_name = get_conversation_name(conversation_id) if conversation_id else ""
+        reason = "permission" if waiting_for_input else "completed"
 
-        # Get completion message (LLM-generated or fallback)
-        completion_message = get_llm_completion_message()
+        print(f"Announcing {reason} for chat: {chat_name or 'Unknown'}", file=sys.stderr)
 
-        # Combine chat name with completion message into a natural, flowing announcement
-        full_message = f"Chat {chat_name}, {completion_message}"
-        print(f"Announcing: {full_message}", file=sys.stderr)
-
-        # Call the TTS script with the completion message
+        # Use the new OpenAI audio generation
         uv_path = get_uv_path()
-        result = subprocess.run([
-            uv_path, "run", tts_script, full_message
-        ],
-        capture_output=True,  # Suppress output
-        text=True,
-        timeout=10  # 10-second timeout
-        )
+        llm_script = Path.home() / '.claude' / 'hooks' / 'utils' / 'llm' / 'oai.py'
 
-        if result.returncode != 0:
-            print(f"TTS failed with return code {result.returncode}", file=sys.stderr)
-            if result.stderr:
-                print(f"   stderr: {result.stderr}", file=sys.stderr)
+        if llm_script.exists():
+            cmd = [uv_path, "run", str(llm_script), "--completion-audio", chat_name or "", reason]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30  # Audio generation may take longer
+            )
+
+            if result.returncode != 0:
+                print(f"Audio generation failed: {result.stderr}", file=sys.stderr)
+            else:
+                print("Audio completed successfully", file=sys.stderr)
         else:
-            print("TTS completed successfully", file=sys.stderr)
+            print("LLM script not found", file=sys.stderr)
 
     except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError) as e:
-        print(f"TTS error: {e}", file=sys.stderr)
+        print(f"Audio error: {e}", file=sys.stderr)
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
 
@@ -213,10 +208,12 @@ def main():
         # Cursor provides: conversation_id, generation_id, hook_event_name, workspace_roots, status, loop_count
         input_data = json.load(sys.stdin)
 
-        # Extract fields
-        conversation_id = input_data.get("conversation_id", "")
+        # Extract fields (Claude Code uses session_id, not conversation_id)
+        conversation_id = input_data.get("session_id", "")
         status = input_data.get("status", "")
         loop_count = input_data.get("loop_count", 0)
+        # stop_hook_active is True when Claude is waiting for user input (permission)
+        stop_hook_active = input_data.get("stop_hook_active", False)
 
         # Ensure log directory exists
         log_dir = Path.home() / '.claude' / 'logs'
@@ -242,7 +239,7 @@ def main():
 
         # Announce completion via TTS (only if --notify flag is set)
         if args.notify:
-            announce_completion(conversation_id)
+            announce_completion(conversation_id, waiting_for_input=stop_hook_active)
 
         # Return optional followup message (Cursor can auto-submit this)
         result = {}

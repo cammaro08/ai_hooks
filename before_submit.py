@@ -260,8 +260,8 @@ def main():
         # Cursor provides: conversation_id, generation_id, hook_event_name, workspace_roots, prompt, attachments
         input_data = json.loads(sys.stdin.read())
 
-        # Extract conversation_id and prompt (Cursor uses conversation_id instead of session_id)
-        conversation_id = input_data.get('conversation_id', 'unknown')
+        # Extract session_id and prompt (Claude Code uses session_id)
+        conversation_id = input_data.get('session_id', 'unknown')
         prompt = input_data.get('prompt', '')
 
         # Log the user prompt
